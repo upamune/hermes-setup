@@ -26,11 +26,10 @@ provider key も必要なら Hermes が読む env 名で追加する。
 ## Install
 
 ```sh
-export HERMES_BWS_PROJECT_ID='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh
 ```
 
-`BWS_ACCESS_TOKEN` は prompt で入れる。非対話なら先に export。
+`HERMES_BWS_PROJECT_ID` と `BWS_ACCESS_TOKEN` は prompt で入れる。非対話なら先に export。
 
 ```sh
 export BWS_ACCESS_TOKEN='0.xxxxxxxxxxxxxxxxx'

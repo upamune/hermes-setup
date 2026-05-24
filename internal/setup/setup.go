@@ -364,6 +364,13 @@ func configureHermes(opts Options) error {
 	setNested(cfg, []any{"terminal", "web", "file", "skills"}, "toolsets")
 	setNested(cfg, true, "secrets", "bitwarden", "enabled")
 	setNested(cfg, "BWS_ACCESS_TOKEN", "secrets", "bitwarden", "access_token_env")
+	if opts.BitwardenProject == "" && !opts.NoPrompt {
+		if v, ok, err := promptInput("Bitwarden project ID", "Blank to skip."); err != nil {
+			return err
+		} else if ok && v != "" {
+			opts.BitwardenProject = v
+		}
+	}
 	if opts.BitwardenProject != "" {
 		setNested(cfg, opts.BitwardenProject, "secrets", "bitwarden", "project_id")
 	}
@@ -609,6 +616,28 @@ func promptSecret(title, description string) (string, bool, error) {
 	input := huh.NewInput().
 		Title(title).
 		Password(true).
+		Value(&value)
+	if description != "" {
+		input = input.Description(description)
+	}
+	if err := input.Run(); err != nil {
+		return "", false, err
+	}
+	return strings.TrimSpace(value), true, nil
+}
+
+func promptInput(title, description string) (string, bool, error) {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return "", false, err
+	}
+	if stat.Mode()&os.ModeCharDevice == 0 {
+		fmt.Printf("[skip] %s is not set and stdin is not interactive\n", title)
+		return "", false, nil
+	}
+	value := ""
+	input := huh.NewInput().
+		Title(title).
 		Value(&value)
 	if description != "" {
 		input = input.Description(description)
