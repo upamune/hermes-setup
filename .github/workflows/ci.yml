@@ -28,13 +28,13 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Test
-        run: go test ./...
+        run: make test
 
       - name: Vet
-        run: go vet ./...
+        run: make lint
 
       - name: Build
-        run: go build ./cmd/hermes-setup
+        run: make build
 
       - name: Verify GitHub Actions are pinned
         run: go run github.com/suzuki-shunsuke/pinact/v3/cmd/pinact@v3.10.1 run -check -verify

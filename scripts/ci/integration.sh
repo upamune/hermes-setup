@@ -10,7 +10,7 @@ unset BWS_ACCESS_TOKEN
 rm -rf "$HERMES_HOME"
 mkdir -p "$HERMES_HOME"
 
-go build -o hermes-setup ./cmd/hermes-setup
+make build
 
 common_args=(
   --skip-summon
