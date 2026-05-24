@@ -29,6 +29,7 @@ type InstallCmd struct {
 	SkipHermesInstall bool   `help:"Skip Hermes Agent installation."`
 	SkipSelfInstall   bool   `help:"Skip installing hermes-setup into ~/.local/bin via go install."`
 	NoPrompt          bool   `help:"Do not prompt for missing secrets."`
+	AllowMissingBWS   bool   `name:"allow-missing-bws-token" help:"Allow final doctor to pass without BWS_ACCESS_TOKEN."`
 	NoGatewayStart    bool   `help:"Do not install/restart the gateway service."`
 	LockDownIncoming  bool   `help:"Deny inbound traffic with UFW after Tailscale SSH is confirmed."`
 	ForceLockDown     bool   `name:"force-lock-down-incoming" help:"Allow inbound lockdown even when the current SSH client is not a Tailscale IP."`
@@ -78,6 +79,7 @@ func (c InstallCmd) Run(ctx context.Context) error {
 	opts.SkipHermesInstall = c.SkipHermesInstall || setup.EnvBool("HERMES_SETUP_SKIP_HERMES_INSTALL")
 	opts.SkipSelfInstall = c.SkipSelfInstall || setup.EnvBool("HERMES_SETUP_SKIP_SELF_INSTALL")
 	opts.NoPrompt = c.NoPrompt || setup.EnvBool("HERMES_SETUP_NO_PROMPT")
+	opts.AllowMissingBWS = c.AllowMissingBWS || setup.EnvBool("HERMES_SETUP_ALLOW_MISSING_BWS_TOKEN")
 	opts.NoGatewayStart = c.NoGatewayStart || setup.EnvBool("HERMES_SETUP_NO_GATEWAY_START")
 	opts.LockDownIncoming = c.LockDownIncoming || setup.EnvBool("HERMES_SETUP_LOCK_DOWN_INCOMING")
 	opts.ForceLockDown = c.ForceLockDown || setup.EnvBool("HERMES_SETUP_FORCE_LOCK_DOWN_INCOMING")

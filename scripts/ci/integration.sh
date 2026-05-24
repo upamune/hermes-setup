@@ -19,6 +19,7 @@ common_args=(
   --no-disable-sshd
   --no-gateway-start
   --no-prompt
+  --allow-missing-bws-token
   --home "$HERMES_HOME"
   --bitwarden-project "$HERMES_BWS_PROJECT_ID"
 )

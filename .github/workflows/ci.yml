@@ -37,7 +37,7 @@ jobs:
         run: make build
 
       - name: Verify GitHub Actions are pinned
-        run: go run github.com/suzuki-shunsuke/pinact/v3/cmd/pinact@v3.10.1 run -check -verify
+        run: go tool pinact run -check -verify
         env:
           GITHUB_TOKEN: ${{ github.token }}
 

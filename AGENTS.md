@@ -17,7 +17,7 @@ This repository builds `hermes-setup`, a Go CLI for bootstrapping Hermes Agent o
 - `go build ./cmd/hermes-setup`: compile the CLI.
 - `go run ./cmd/hermes-setup --help`: inspect command and flag behavior locally.
 - `bash -n scripts/install.sh scripts/ci/integration.sh`: syntax-check shell scripts.
-- `GOTOOLCHAIN=go1.26.3+auto go run github.com/suzuki-shunsuke/pinact/v3/cmd/pinact@v3.10.1 run -check -verify .github/workflows/ci.yml`: verify GitHub Actions remain SHA-pinned.
+- `make pinact`: verify GitHub Actions remain SHA-pinned with the `go.mod` tool directive.
 
 ## Coding Style & Naming Conventions
 
