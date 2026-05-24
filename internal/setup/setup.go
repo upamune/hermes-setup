@@ -34,6 +34,7 @@ type Options struct {
 	SkipSelfInstall   bool
 	NoPrompt          bool
 	AllowMissingBWS   bool
+	AllowMissingTS    bool
 	NoGatewayStart    bool
 	LockDownIncoming  bool
 	ForceLockDown     bool
@@ -118,6 +119,7 @@ func Install(ctx context.Context, opts Options) error {
 	doctorOpts := DefaultOptions()
 	doctorOpts.Home = opts.Home
 	doctorOpts.AllowMissingBWS = opts.AllowMissingBWS
+	doctorOpts.AllowMissingTS = opts.SkipTailscale
 	return Doctor(ctx, doctorOpts)
 }
 
@@ -299,13 +301,17 @@ func Doctor(ctx context.Context, opts Options) error {
 	for _, name := range []string{"sh", "curl", "git"} {
 		check(hasCommand(name), name+" is available")
 	}
-	check(hasCommand("tailscale"), "tailscale command is available")
-	if hasCommand("systemctl") {
-		check(runQuiet(ctx, "systemctl", "is-enabled", "--quiet", "tailscaled"), "tailscaled is enabled in systemd")
-		check(runQuiet(ctx, "systemctl", "is-active", "--quiet", "tailscaled"), "tailscaled is active in systemd")
-	}
-	if hasCommand("tailscale") {
-		check(runQuiet(ctx, "tailscale", "status", "--peers=false"), "tailscale is logged in")
+	if opts.AllowMissingTS {
+		check(true, "tailscale is present or explicitly allowed to be missing")
+	} else {
+		check(hasCommand("tailscale"), "tailscale command is available")
+		if hasCommand("systemctl") {
+			check(runQuiet(ctx, "systemctl", "is-enabled", "--quiet", "tailscaled"), "tailscaled is enabled in systemd")
+			check(runQuiet(ctx, "systemctl", "is-active", "--quiet", "tailscaled"), "tailscaled is active in systemd")
+		}
+		if hasCommand("tailscale") {
+			check(runQuiet(ctx, "tailscale", "status", "--peers=false"), "tailscale is logged in")
+		}
 	}
 	check(hasCommand("hermes"), "hermes command is available")
 

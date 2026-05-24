@@ -40,6 +40,7 @@ type DoctorCmd struct {
 	Home             string `help:"Hermes home directory." type:"path"`
 	BitwardenProject string `help:"Bitwarden Secrets Manager project UUID."`
 	AllowMissingBWS  bool   `name:"allow-missing-bws-token" help:"Allow doctor to pass without BWS_ACCESS_TOKEN."`
+	AllowMissingTS   bool   `name:"allow-missing-tailscale" help:"Allow doctor to pass without Tailscale."`
 	Fix              bool   `help:"Repair idempotent config managed by hermes-setup."`
 }
 
@@ -94,6 +95,7 @@ func (c DoctorCmd) Run(ctx context.Context) error {
 		opts.BitwardenProject = c.BitwardenProject
 	}
 	opts.AllowMissingBWS = c.AllowMissingBWS || setup.EnvBool("HERMES_SETUP_ALLOW_MISSING_BWS_TOKEN")
+	opts.AllowMissingTS = c.AllowMissingTS || setup.EnvBool("HERMES_SETUP_ALLOW_MISSING_TAILSCALE")
 	opts.Fix = c.Fix
 	return setup.Doctor(ctx, opts)
 }
@@ -120,12 +122,14 @@ func (c SSHCmd) Run(ctx context.Context) error {
 
 func main() {
 	var cli CLI
+	ctx := context.Background()
 	kctx := kong.Parse(&cli,
 		kong.Name("hermes-setup"),
 		kong.Description("Install Hermes Agent on Ubuntu/Debian x86_64 machines."),
 		kong.UsageOnError(),
+		kong.BindTo(ctx, (*context.Context)(nil)),
 	)
-	if err := kctx.Run(context.Background()); err != nil {
+	if err := kctx.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "hermes-setup: %v\n", err)
 		os.Exit(1)
 	}

@@ -24,7 +24,7 @@ common_args=(
 )
 
 ./hermes-setup install "${common_args[@]}"
-./hermes-setup doctor --home "$HERMES_HOME" --bitwarden-project "$HERMES_BWS_PROJECT_ID" --allow-missing-bws-token
+./hermes-setup doctor --home "$HERMES_HOME" --bitwarden-project "$HERMES_BWS_PROJECT_ID" --allow-missing-bws-token --allow-missing-tailscale
 
 if grep -q '^BWS_ACCESS_TOKEN=' "$HERMES_HOME/.env"; then
   echo "BWS_ACCESS_TOKEN should not be written when it is missing and prompts are disabled" >&2
@@ -35,7 +35,7 @@ cp "$HERMES_HOME/config.yaml" "$RUNNER_TEMP/config.first.yaml"
 cp "$HERMES_HOME/.env" "$RUNNER_TEMP/env.first"
 
 ./hermes-setup install "${common_args[@]}"
-./hermes-setup doctor --home "$HERMES_HOME" --bitwarden-project "$HERMES_BWS_PROJECT_ID" --allow-missing-bws-token
+./hermes-setup doctor --home "$HERMES_HOME" --bitwarden-project "$HERMES_BWS_PROJECT_ID" --allow-missing-bws-token --allow-missing-tailscale
 
 diff -u "$RUNNER_TEMP/config.first.yaml" "$HERMES_HOME/config.yaml"
 diff -u "$RUNNER_TEMP/env.first" "$HERMES_HOME/.env"
