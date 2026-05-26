@@ -52,6 +52,8 @@ Hermes Agent 本体の installer が持つ対話 wizard は自動実行では起
 hermes setup
 ```
 
+`BWS_ACCESS_TOKEN` / `HERMES_BWS_PROJECT_ID` を渡さずに非対話実行した場合も、Bitwarden と gateway 起動は後回しにできる。設定後に `hermes gateway install` を実行する。
+
 ## Tailscale
 
 `TS_AUTHKEY` があれば使う。

@@ -102,12 +102,15 @@ func Install(ctx context.Context, opts Options) error {
 			return err
 		}
 	}
+	secretsDeferred := opts.BitwardenProject == "" && os.Getenv("BWS_ACCESS_TOKEN") == ""
 	if err := configureHermes(opts); err != nil {
 		return err
 	}
-	if !opts.NoGatewayStart {
+	if !opts.NoGatewayStart && !secretsDeferred {
 		_ = run(ctx, mapHome(opts), "hermes", "gateway", "install")
 		_ = run(ctx, mapHome(opts), "hermes", "gateway", "restart")
+	} else if !opts.NoGatewayStart && secretsDeferred {
+		fmt.Println("[manual] Gateway start skipped because Bitwarden secrets are not configured; run `hermes setup` or set BWS secrets, then `hermes gateway install`.")
 	}
 	if opts.LockDownIncoming {
 		if err := lockDownIncoming(ctx, opts); err != nil {
@@ -125,7 +128,7 @@ func Install(ctx context.Context, opts Options) error {
 	}
 	doctorOpts := DefaultOptions()
 	doctorOpts.Home = opts.Home
-	doctorOpts.AllowMissingBWS = opts.AllowMissingBWS
+	doctorOpts.AllowMissingBWS = opts.AllowMissingBWS || secretsDeferred
 	doctorOpts.AllowMissingTS = opts.SkipTailscale
 	return Doctor(ctx, doctorOpts)
 }
@@ -552,7 +555,11 @@ func Doctor(ctx context.Context, opts Options) error {
 		check(nestedString(cfg, "model", "provider") == defaultProvider, "model.provider is "+defaultProvider)
 		check(nestedString(cfg, "model", "default") == defaultModel, "model.default is "+defaultModel)
 		check(nestedBool(cfg, "secrets", "bitwarden", "enabled"), "Bitwarden Secrets Manager is enabled")
-		check(nestedString(cfg, "secrets", "bitwarden", "project_id") != "", "Bitwarden project_id is configured")
+		if opts.AllowMissingBWS {
+			check(true, "Bitwarden project_id is configured or explicitly allowed to be missing")
+		} else {
+			check(nestedString(cfg, "secrets", "bitwarden", "project_id") != "", "Bitwarden project_id is configured")
+		}
 	}
 
 	env, err := readEnv(envPath(opts.Home))
