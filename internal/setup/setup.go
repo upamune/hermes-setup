@@ -260,7 +260,7 @@ func SSH(ctx context.Context, opts SSHOptions) error {
 	if opts.Ref == "" {
 		opts.Ref = "latest"
 	}
-	remoteArgs := append([]string{}, opts.Args...)
+	remoteArgs := sshRemoteArgs(opts.Args)
 	remote := "curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh"
 	if len(remoteArgs) > 0 {
 		remote += " -s -- " + shellJoin(remoteArgs)
@@ -272,6 +272,17 @@ func SSH(ctx context.Context, opts SSHOptions) error {
 	}
 	args = append(args, opts.Host, "env", "HERMES_SETUP_REPO="+shellQuote(opts.Repo), "HERMES_SETUP_REF="+shellQuote(opts.Ref), "sh", "-lc", shellQuote(remote))
 	return run(ctx, nil, "ssh", args...)
+}
+
+func sshRemoteArgs(args []string) []string {
+	out := make([]string, 0, len(args))
+	for _, arg := range args {
+		if arg == "--" {
+			continue
+		}
+		out = append(out, arg)
+	}
+	return out
 }
 
 func installTailscale(ctx context.Context, opts Options) error {

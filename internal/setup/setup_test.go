@@ -94,6 +94,27 @@ func TestInstallScriptArgsDropsSetupUser(t *testing.T) {
 	}
 }
 
+func TestSSHRemoteArgsDropsSeparator(t *testing.T) {
+	got := sshRemoteArgs([]string{"--", "--setup-user", "hermes", "--no-disable-sshd"})
+	want := []string{"--setup-user", "hermes", "--no-disable-sshd"}
+	if len(got) != len(want) {
+		t.Fatalf("sshRemoteArgs length = %d, want %d: %#v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("sshRemoteArgs[%d] = %q, want %q; got %#v", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestShellJoinQuotesArgs(t *testing.T) {
+	got := shellJoin(sshRemoteArgs([]string{"--", "--setup-user", "hermes"}))
+	want := "'--setup-user' 'hermes'"
+	if got != want {
+		t.Fatalf("shellJoin(sshRemoteArgs(...)) = %q, want %q", got, want)
+	}
+}
+
 func TestMergeAuthorizedKeysPreservesExistingAndDeduplicates(t *testing.T) {
 	got := string(mergeAuthorizedKeys(
 		[]byte("ssh-ed25519 existing\nssh-ed25519 shared\n"),
