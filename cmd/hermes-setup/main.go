@@ -23,6 +23,7 @@ type InstallCmd struct {
 	ImportPath        string `name:"import" help:"Restore a Hermes backup zip before configuration." type:"path"`
 	BitwardenProject  string `help:"Bitwarden Secrets Manager project UUID."`
 	TailscaleHostname string `help:"Tailscale hostname to pass to tailscale up."`
+	SetupUser         string `help:"When run as root, create this user and rerun install as that user."`
 	ForceImport       bool   `help:"Pass --force to hermes import when supported."`
 	SkipSummon        bool   `help:"Skip summon bootstrap."`
 	SkipTailscale     bool   `help:"Skip Tailscale installation and Tailscale SSH setup."`
@@ -72,6 +73,9 @@ func (c InstallCmd) Run(ctx context.Context) error {
 	if c.TailscaleHostname != "" {
 		opts.TailscaleHostname = c.TailscaleHostname
 	}
+	if c.SetupUser != "" {
+		opts.SetupUser = c.SetupUser
+	}
 	opts.ImportPath = c.ImportPath
 	opts.ForceImport = c.ForceImport
 	opts.SkipSummon = c.SkipSummon || setup.EnvBool("HERMES_SETUP_SKIP_SUMMON")
@@ -85,6 +89,9 @@ func (c InstallCmd) Run(ctx context.Context) error {
 	opts.ForceLockDown = c.ForceLockDown || setup.EnvBool("HERMES_SETUP_FORCE_LOCK_DOWN_INCOMING")
 	opts.DisableSSHD = c.DisableSSHD && !setup.EnvBool("HERMES_SETUP_NO_DISABLE_SSHD")
 	opts.ForceDisableSSHD = c.ForceDisableSSHD || setup.EnvBool("HERMES_SETUP_FORCE_DISABLE_SSHD")
+	if opts.SetupUser == "" {
+		opts.SetupUser = os.Getenv("HERMES_SETUP_USER")
+	}
 	return setup.Install(ctx, opts)
 }
 

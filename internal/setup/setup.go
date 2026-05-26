@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 
 	"charm.land/huh/v2"
@@ -27,6 +29,7 @@ type Options struct {
 	ImportPath        string
 	BitwardenProject  string
 	TailscaleHostname string
+	SetupUser         string
 	ForceImport       bool
 	SkipSummon        bool
 	SkipTailscale     bool
@@ -65,6 +68,9 @@ func DefaultOptions() Options {
 func Install(ctx context.Context, opts Options) error {
 	if err := checkTarget(); err != nil {
 		return err
+	}
+	if os.Geteuid() == 0 && opts.SetupUser != "" && os.Getenv("HERMES_SETUP_BOOTSTRAPPED_USER") == "" {
+		return bootstrapSetupUser(ctx, opts)
 	}
 	if !opts.SkipSummon {
 		if err := run(ctx, nil, "sh", "-c", "curl -fsSL https://raw.githubusercontent.com/upamune/summon/main/summon.sh | sh"); err != nil {
@@ -121,6 +127,109 @@ func Install(ctx context.Context, opts Options) error {
 	doctorOpts.AllowMissingBWS = opts.AllowMissingBWS
 	doctorOpts.AllowMissingTS = opts.SkipTailscale
 	return Doctor(ctx, doctorOpts)
+}
+
+func bootstrapSetupUser(ctx context.Context, opts Options) error {
+	user := strings.TrimSpace(opts.SetupUser)
+	if !validSetupUserName(user) {
+		return fmt.Errorf("invalid setup user %q: use a normal Linux account name", opts.SetupUser)
+	}
+	if user == "root" {
+		return errors.New("--setup-user must not be root")
+	}
+	if !hasCommand("sudo") {
+		if err := run(ctx, nil, "apt-get", "update"); err != nil {
+			return err
+		}
+		if err := run(ctx, nil, "apt-get", "install", "-y", "sudo"); err != nil {
+			return err
+		}
+	}
+	if !linuxUserExists(ctx, user) {
+		if err := run(ctx, nil, "useradd", "--create-home", "--shell", "/bin/bash", "--groups", "sudo", user); err != nil {
+			return err
+		}
+	} else if !userInGroup(ctx, user, "sudo") {
+		if err := run(ctx, nil, "usermod", "--append", "--groups", "sudo", user); err != nil {
+			return err
+		}
+	}
+	if err := installSetupUserSudoers(user); err != nil {
+		return err
+	}
+	if err := copyRootAuthorizedKeys(ctx, user); err != nil {
+		return err
+	}
+
+	env := bootstrapEnv()
+	envNames := make([]string, 0, len(env))
+	for name := range env {
+		envNames = append(envNames, name)
+	}
+	sort.Strings(envNames)
+	remote := "curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh -s --"
+	if args := installScriptArgs(os.Args[1:]); len(args) > 0 {
+		remote += " " + shellJoin(args)
+	}
+	args := []string{"--preserve-env=" + strings.Join(envNames, ","), "-H", "-u", user, "sh", "-lc", remote}
+	return run(ctx, env, "sudo", args...)
+}
+
+func bootstrapEnv() map[string]string {
+	names := []string{
+		"HERMES_SETUP_BOOTSTRAPPED_USER",
+		"HERMES_SETUP_SKIP_SELF_INSTALL",
+		"HERMES_SETUP_SKIP_SUMMON",
+		"HERMES_SETUP_SKIP_TAILSCALE",
+		"HERMES_SETUP_SKIP_HERMES_INSTALL",
+		"HERMES_SETUP_NO_PROMPT",
+		"HERMES_SETUP_ALLOW_MISSING_BWS_TOKEN",
+		"HERMES_SETUP_NO_GATEWAY_START",
+		"HERMES_SETUP_LOCK_DOWN_INCOMING",
+		"HERMES_SETUP_FORCE_LOCK_DOWN_INCOMING",
+		"HERMES_SETUP_NO_DISABLE_SSHD",
+		"HERMES_SETUP_FORCE_DISABLE_SSHD",
+		"HERMES_SETUP_REF",
+		"HERMES_SETUP_REPO",
+		"HERMES_BWS_PROJECT_ID",
+		"BWS_PROJECT_ID",
+		"BWS_ACCESS_TOKEN",
+		"TS_AUTHKEY",
+		"TS_HOSTNAME",
+		"HERMES_SETUP_TAILSCALE_HOSTNAME",
+		"TS_EXTRA_ARGS",
+	}
+	out := map[string]string{}
+	for _, name := range names {
+		if value := os.Getenv(name); value != "" {
+			out[name] = value
+		}
+	}
+	out["HERMES_SETUP_BOOTSTRAPPED_USER"] = "1"
+	return out
+}
+
+func installScriptArgs(args []string) []string {
+	out := make([]string, 0, len(args))
+	for skipNext := false; len(args) > 0; args = args[1:] {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		arg := args[0]
+		if arg == "install" {
+			continue
+		}
+		if arg == "--setup-user" {
+			skipNext = true
+			continue
+		}
+		if strings.HasPrefix(arg, "--setup-user=") {
+			continue
+		}
+		out = append(out, arg)
+	}
+	return out
 }
 
 func Import(ctx context.Context, opts Options) error {
@@ -261,6 +370,116 @@ func disableSSHD(ctx context.Context, opts Options) error {
 		return errors.New("no OpenSSH systemd service found: tried ssh.service and sshd.service")
 	}
 	return nil
+}
+
+func validSetupUserName(name string) bool {
+	if name == "" || len(name) > 32 {
+		return false
+	}
+	for i, r := range name {
+		if r >= 'a' && r <= 'z' {
+			continue
+		}
+		if i > 0 && r >= '0' && r <= '9' {
+			continue
+		}
+		if i > 0 && (r == '-' || r == '_') {
+			continue
+		}
+		return false
+	}
+	return !strings.HasSuffix(name, "-")
+}
+
+func linuxUserExists(ctx context.Context, name string) bool {
+	return runQuiet(ctx, "id", "-u", name)
+}
+
+func userInGroup(ctx context.Context, user, group string) bool {
+	return runQuiet(ctx, "id", "-nG", user) && strings.Contains(" "+commandOutput(ctx, "id", "-nG", user)+" ", " "+group+" ")
+}
+
+func commandOutput(ctx context.Context, name string, args ...string) string {
+	cmd := exec.CommandContext(ctx, name, args...)
+	b, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
+func installSetupUserSudoers(user string) error {
+	path := filepath.Join("/etc/sudoers.d", "hermes-setup-"+user)
+	line := user + " ALL=(ALL) NOPASSWD:ALL\n"
+	if err := os.WriteFile(path, []byte(line), 0o440); err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyRootAuthorizedKeys(ctx context.Context, user string) error {
+	src := "/root/.ssh/authorized_keys"
+	if _, err := os.Stat(src); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	home := "/home/" + user
+	sshDir := filepath.Join(home, ".ssh")
+	dst := filepath.Join(sshDir, "authorized_keys")
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
+		return err
+	}
+	srcBytes, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	dstBytes, _ := os.ReadFile(dst)
+	if err := os.WriteFile(dst, mergeAuthorizedKeys(dstBytes, srcBytes), 0o600); err != nil {
+		return err
+	}
+	uid, gid, err := linuxUserIDs(ctx, user)
+	if err != nil {
+		return err
+	}
+	if err := os.Chown(sshDir, uid, gid); err != nil {
+		return err
+	}
+	return os.Chown(dst, uid, gid)
+}
+
+func mergeAuthorizedKeys(existing, incoming []byte) []byte {
+	lines := []string{}
+	seen := map[string]bool{}
+	add := func(b []byte) {
+		for _, line := range strings.Split(string(b), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || seen[line] {
+				continue
+			}
+			seen[line] = true
+			lines = append(lines, line)
+		}
+	}
+	add(existing)
+	add(incoming)
+	if len(lines) == 0 {
+		return []byte{}
+	}
+	return []byte(strings.Join(lines, "\n") + "\n")
+}
+
+func linuxUserIDs(ctx context.Context, user string) (int, int, error) {
+	uid, err := strconv.Atoi(commandOutput(ctx, "id", "-u", user))
+	if err != nil {
+		return 0, 0, fmt.Errorf("read uid for %s: %w", user, err)
+	}
+	gid, err := strconv.Atoi(commandOutput(ctx, "id", "-g", user))
+	if err != nil {
+		return 0, 0, fmt.Errorf("read gid for %s: %w", user, err)
+	}
+	return uid, gid, nil
 }
 
 func currentSSHLooksTailscale() bool {

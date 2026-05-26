@@ -58,3 +58,49 @@ func TestConfigureHermesIsIdempotentAndPreservesOtherEnv(t *testing.T) {
 		t.Fatal("TELEGRAM_BOT_TOKEN should come from Bitwarden, not local .env")
 	}
 }
+
+func TestValidSetupUserName(t *testing.T) {
+	valid := []string{"hermes", "hermes-agent", "hermes_agent", "h1"}
+	for _, name := range valid {
+		if !validSetupUserName(name) {
+			t.Fatalf("validSetupUserName(%q) = false", name)
+		}
+	}
+
+	invalid := []string{"", "Hermes", "1hermes", "hermes.", "hermes-", "hermes agent"}
+	for _, name := range invalid {
+		if validSetupUserName(name) {
+			t.Fatalf("validSetupUserName(%q) = true", name)
+		}
+	}
+}
+
+func TestInstallScriptArgsDropsSetupUser(t *testing.T) {
+	got := installScriptArgs([]string{
+		"install",
+		"--setup-user", "hermes",
+		"--bitwarden-project", "project-123",
+		"--setup-user=other",
+		"--no-disable-sshd",
+	})
+	want := []string{"--bitwarden-project", "project-123", "--no-disable-sshd"}
+	if len(got) != len(want) {
+		t.Fatalf("installScriptArgs length = %d, want %d: %#v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("installScriptArgs[%d] = %q, want %q; got %#v", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestMergeAuthorizedKeysPreservesExistingAndDeduplicates(t *testing.T) {
+	got := string(mergeAuthorizedKeys(
+		[]byte("ssh-ed25519 existing\nssh-ed25519 shared\n"),
+		[]byte("ssh-ed25519 shared\nssh-rsa root\n"),
+	))
+	want := "ssh-ed25519 existing\nssh-ed25519 shared\nssh-rsa root\n"
+	if got != want {
+		t.Fatalf("mergeAuthorizedKeys() = %q, want %q", got, want)
+	}
+}

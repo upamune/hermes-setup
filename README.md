@@ -37,6 +37,15 @@ export HERMES_BWS_PROJECT_ID='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh
 ```
 
+root でしか入れない初期ホストでは、運用ユーザーを作ってからそのユーザーで続行する:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh -s -- \
+  --setup-user hermes
+```
+
+`--setup-user` はユーザーがなければ `/home/<user>` に作成し、既存ユーザーなら sudo グループへ追加する。root の `authorized_keys` があれば引き継ぎ、セットアップ継続用に passwordless sudo も設定する。
+
 ## Tailscale
 
 `TS_AUTHKEY` があれば使う。
