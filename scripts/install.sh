@@ -95,6 +95,8 @@ if [ "${HERMES_SETUP_SKIP_SUMMON:-0}" != "1" ]; then
   curl -fsSL https://raw.githubusercontent.com/upamune/summon/main/summon.sh | sh
 fi
 
+cd "${HOME:-.}"
+
 export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
 
 if command -v mise >/dev/null 2>&1; then
