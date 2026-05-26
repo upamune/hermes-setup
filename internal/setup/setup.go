@@ -3,6 +3,7 @@ package setup
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -274,7 +275,14 @@ func SSH(ctx context.Context, opts SSHOptions) error {
 	if opts.RequestTTY {
 		args = append(args, "-t")
 	}
-	args = append(args, opts.Host, "env", "HERMES_SETUP_REPO="+shellQuote(opts.Repo), "HERMES_SETUP_REF="+shellQuote(opts.Ref), "sh", "-lc", shellQuote(remote))
+	envArgs := []string{
+		"HERMES_SETUP_REPO=" + shellQuote(opts.Repo),
+		"HERMES_SETUP_REF=" + shellQuote(opts.Ref),
+	}
+	envArgs = append(envArgs, ghosttyTerminfoEnv(ctx)...)
+	args = append(args, opts.Host, "env")
+	args = append(args, envArgs...)
+	args = append(args, "sh", "-lc", shellQuote(remote))
 	return run(ctx, nil, "ssh", args...)
 }
 
@@ -300,6 +308,23 @@ func defaultSetupRef(ctx context.Context) string {
 		return "main"
 	}
 	return ref
+}
+
+func ghosttyTerminfoEnv(ctx context.Context) []string {
+	if EnvBool("HERMES_SETUP_SKIP_GHOSTTY_TERMINFO") {
+		return nil
+	}
+	if os.Getenv("TERM") != "xterm-ghostty" && !EnvBool("HERMES_SETUP_GHOSTTY_TERMINFO") {
+		return nil
+	}
+	out, err := exec.CommandContext(ctx, "infocmp", "-x", "xterm-ghostty").Output()
+	if err != nil || len(out) == 0 {
+		return nil
+	}
+	return []string{
+		"HERMES_SETUP_TERMINFO_NAME=" + shellQuote("xterm-ghostty"),
+		"HERMES_SETUP_TERMINFO_B64=" + shellQuote(base64.StdEncoding.EncodeToString(out)),
+	}
 }
 
 func installTailscale(ctx context.Context, opts Options) error {

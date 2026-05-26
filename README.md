@@ -82,6 +82,12 @@ hermes-setup install --lock-down-incoming
 hermes-setup ssh user@example.com -- --bitwarden-project xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
+ローカルの `TERM` が `xterm-ghostty` の場合、`hermes-setup ssh` は Ghostty の terminfo をリモートユーザーの `~/.terminfo` に自動インストールする。別の `TERM` から明示的に入れる場合:
+
+```sh
+HERMES_SETUP_GHOSTTY_TERMINFO=1 hermes-setup ssh user@example.com
+```
+
 ## Import
 
 ```sh

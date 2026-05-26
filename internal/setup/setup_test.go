@@ -122,6 +122,14 @@ func TestDefaultSetupRefHasFallback(t *testing.T) {
 	}
 }
 
+func TestGhosttyTerminfoEnvDisabledByDefaultForOtherTerms(t *testing.T) {
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("HERMES_SETUP_GHOSTTY_TERMINFO", "")
+	if got := ghosttyTerminfoEnv(context.Background()); got != nil {
+		t.Fatalf("ghosttyTerminfoEnv() = %#v, want nil", got)
+	}
+}
+
 func TestMergeAuthorizedKeysPreservesExistingAndDeduplicates(t *testing.T) {
 	got := string(mergeAuthorizedKeys(
 		[]byte("ssh-ed25519 existing\nssh-ed25519 shared\n"),
