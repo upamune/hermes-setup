@@ -46,6 +46,12 @@ curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/i
 
 `--setup-user` はユーザーがなければ `/home/<user>` に作成し、既存ユーザーなら sudo グループへ追加する。root の `authorized_keys` があれば引き継ぎ、セットアップ継続用に passwordless sudo も設定する。
 
+Hermes Agent 本体の installer が持つ対話 wizard は自動実行では起動しない。provider やログインを対話で設定したい場合は、セットアップ後に対象ユーザーで実行する:
+
+```sh
+hermes setup
+```
+
 ## Tailscale
 
 `TS_AUTHKEY` があれば使う。

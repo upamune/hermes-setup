@@ -92,9 +92,10 @@ func Install(ctx context.Context, opts Options) error {
 		_ = run(ctx, map[string]string{"GOBIN": binDir}, "go", "install", "github.com/upamune/hermes-setup/cmd/hermes-setup@"+ref)
 	}
 	if !opts.SkipHermesInstall && !hasCommand("hermes") {
-		if err := run(ctx, nil, "bash", "-lc", "curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash"); err != nil {
+		if err := run(ctx, nil, "bash", "-lc", "curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --skip-setup"); err != nil {
 			return err
 		}
+		fmt.Println("[manual] Hermes interactive setup was skipped; run `hermes setup` as the target user when you want the upstream wizard.")
 	}
 	if opts.ImportPath != "" {
 		if err := Import(ctx, opts); err != nil {
