@@ -262,7 +262,7 @@ func SSH(ctx context.Context, opts SSHOptions) error {
 		opts.Repo = "github.com/upamune/hermes-setup"
 	}
 	if opts.Ref == "" {
-		opts.Ref = "main"
+		opts.Ref = defaultSetupRef(ctx)
 	}
 	remoteArgs := sshRemoteArgs(opts.Args)
 	remote := "curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh"
@@ -287,6 +287,19 @@ func sshRemoteArgs(args []string) []string {
 		out = append(out, arg)
 	}
 	return out
+}
+
+func defaultSetupRef(ctx context.Context) string {
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
+	b, err := cmd.Output()
+	if err != nil {
+		return "main"
+	}
+	ref := strings.TrimSpace(string(b))
+	if ref == "" {
+		return "main"
+	}
+	return ref
 }
 
 func installTailscale(ctx context.Context, opts Options) error {

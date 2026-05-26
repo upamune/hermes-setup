@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -112,6 +113,12 @@ func TestShellJoinQuotesArgs(t *testing.T) {
 	want := "'--setup-user' 'hermes'"
 	if got != want {
 		t.Fatalf("shellJoin(sshRemoteArgs(...)) = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultSetupRefHasFallback(t *testing.T) {
+	if got := defaultSetupRef(context.Background()); got == "" {
+		t.Fatal("defaultSetupRef returned empty string")
 	}
 }
 

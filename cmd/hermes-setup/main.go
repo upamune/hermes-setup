@@ -54,7 +54,7 @@ type ImportCmd struct {
 
 type SSHCmd struct {
 	Host       string   `arg:"" help:"SSH host, for example user@example.com."`
-	Ref        string   `help:"hermes-setup git ref used by the remote installer." default:"main"`
+	Ref        string   `help:"hermes-setup git ref used by the remote installer."`
 	Repo       string   `help:"Go module path for hermes-setup." default:"github.com/upamune/hermes-setup"`
 	RequestTTY bool     `name:"tty" help:"Request a remote TTY for prompts." default:"true" negatable:""`
 	Args       []string `arg:"" optional:"" passthrough:"" help:"Arguments passed to remote install.sh after --."`
