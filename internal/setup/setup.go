@@ -85,7 +85,7 @@ func Install(ctx context.Context, opts Options) error {
 	if !opts.SkipSelfInstall && hasCommand("go") {
 		ref := os.Getenv("HERMES_SETUP_REF")
 		if ref == "" {
-			ref = "latest"
+			ref = "main"
 		}
 		binDir := filepath.Join(homeDir(), ".local", "bin")
 		_ = os.MkdirAll(binDir, 0o755)
@@ -262,7 +262,7 @@ func SSH(ctx context.Context, opts SSHOptions) error {
 		opts.Repo = "github.com/upamune/hermes-setup"
 	}
 	if opts.Ref == "" {
-		opts.Ref = "latest"
+		opts.Ref = "main"
 	}
 	remoteArgs := sshRemoteArgs(opts.Args)
 	remote := "curl -fsSL https://raw.githubusercontent.com/upamune/hermes-setup/main/scripts/install.sh | sh"

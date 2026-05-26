@@ -2,7 +2,7 @@
 set -eu
 
 repo="${HERMES_SETUP_REPO:-github.com/upamune/hermes-setup}"
-ref="${HERMES_SETUP_REF:-latest}"
+ref="${HERMES_SETUP_REF:-main}"
 setup_user=""
 clean_count=0
 
